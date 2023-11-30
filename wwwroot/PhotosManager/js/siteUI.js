@@ -14,16 +14,24 @@ function saveContentScrollPosition() {
 function restoreContentScrollPosition() {
     $("#content")[0].scrollTop = contentScrollPosition;
 }
+function getFormData($form) {
+    const removeTag = new RegExp("(<[a-zA-Z0-9]+>)|(</[a-zA-Z0-9]+>)", "g");
+    var jsonObject = {};
+    $.each($form.serializeArray(), (index, control) => {
+        jsonObject[control.name] = control.value.replace(removeTag, "");
+    });
+    return jsonObject;
+}
 function updateHeader(title, id) {
     let loggedUser;
     /*loggedUser = { Id: 1, Name: "Olivier Morin", Email: "", Avatar: "images/no-avatar.png" }*//*Remplacer par get user*/
-    
+
     $("#header").html(
         $(`
             <span title="Liste des photos" id="listPhotosCmd"> <img src="images/PhotoCloudLogo.png" class="appLogo"></span>
             <span class="viewTitle">`+ title
-            + (id == "listPhotos" ? `<div class="cmdIcon fa fa-plus" id="newPhotoCmd" title="Ajouter une photo"></div>` : "") +
-            `</span>
+            + `<div class="cmdIcon fa fa-plus" id="newPhotoCmd" title="Ajouter une photo"></div>
+            </span>
             <div class="headerMenusContainer"> <span>&nbsp;</span> <!--filler-->` +
             (loggedUser != null ? `
                 <i title="Modifier votre profil">
@@ -37,7 +45,8 @@ function updateHeader(title, id) {
                 </div>
             </div>
             </div>
-        `))
+        `));
+    updateDropDownMenu();
 }
 function updateDropDownMenu() {
     let DDMenu = $("#DDMenu");
@@ -85,42 +94,64 @@ function updateDropDownMenu() {
     });*/
 
     $('#manageUserCmd').on("click", async function () {
-        renderListPhotos();
+        saveContentScrollPosition();
+        renderManageUser();
     });
     $('#loginCmd').on("click", async function () {
-        renderConnect();
+        saveContentScrollPosition();
+        renderLogin();
     });
     $('#logout').on("click", async function () {
         //logout()?
     });
     $('#editProfilMenuCmd').on("click", async function () {
+        saveContentScrollPosition();
         renderEditProfile();
     });
     $('#listPhotosMenuCmd').on("click", async function () {
+        saveContentScrollPosition();
         renderListPhotos();
     });
     $('#aboutCmd').on("click", function () {
+        saveContentScrollPosition();
         renderAbout();
     });
 }
 function renderListPhotos() {
-    pageManager(0, "Liste des photos", "listPhotos");
-
+    timeout();
+    eraseContent();
+    updateHeader("Liste des photos", "listPhotos");
+    $("#content").append(
+        $(`
+            
+        `));
+    restoreContentScrollPosition();
+}
+function renderManageUser() {
+    timeout();
+    eraseContent();
+    updateHeader("Gestion des usagers", "manageUser");
+    $("#newPhotoCmd").hide();
     $("#content").append(
         $(`
             
         `))
 }
-function renderManageUser() {
-    pageManager(0, "Gestion des usagers", "manageUser");
-
+function renderEmailValidation() {
+    timeout();
+    eraseContent();
+    updateHeader("Gestion des usagers", "manageUser");
+    $("#newPhotoCmd").hide();
     $("#content").append(
         $(`
             
         `))
 }
 function renderAbout() {
-    pageManager(0, "À propos...", "about");
+    timeout();
+    eraseContent();
+    updateHeader("À propos...", "about");
+    $("#newPhotoCmd").hide();
     $("#content").append(
         $(`
             <div class="aboutContainer">
@@ -139,9 +170,12 @@ function renderAbout() {
             </div>
         `));
 }
-function renderConnect() {
-    pageManager(1, "Connexion", "connect");
-    let loginMessage = Email = EmailError = passwordError = "";
+function renderLogin(loginMessage = "") {
+    noTimeout();
+    eraseContent();
+    updateHeader("Connexion", "connect");
+    $("#newPhotoCmd").hide();
+    let Email = EmailError = passwordError = "";
     $("#content").append(
         $(`
         <div class="content" style="text-align:center">
@@ -171,17 +205,109 @@ function renderConnect() {
         </div>
         `));
     $('#createProfilCmd').on("click", async function () {
-        renderCreateProfile();
+        renderCreateProfil();
     });
 }
-function renderEditProfile() {
-    renderProfileForm(null /*Remplacer par get user*/, "Profil", "editProfile");
+function renderCreateProfil() {
+    noTimeout(); // ne pas limiter le temps d’inactivité 
+    eraseContent(); // effacer le conteneur #content 
+    updateHeader("Inscription", "createProfil"); // mettre à jour l’entête et menu
+    $("#newPhotoCmd").hide(); // camoufler l’icone de commande d’ajout de photo
+    $("#content").append(`
+    <form class="form" id="createProfilForm">
+        <fieldset>
+            <legend>Adresse ce courriel</legend>
+            <input type="email"
+                class="form-control Email"
+                name="Email"
+                id="Email"
+                placeholder="Courriel"
+                required
+                RequireMessage = ' Veuillez entrer votre courriel'
+                InvalidMessage='Courriel invalide'
+                CustomErrorMessage="Ce courriel est déjà utilisé" />
+            <input class="form-control MatchedInput"
+                type="text"
+                matchedInputId="Email"
+                name="matchedEmail"
+                id="matchedEmail"
+                placeholder="Vérification"
+                required
+                RequireMessage='Veuillez entrez de nouveau votre courriel'
+                InvalidMessage="Les courriels ne correspondent pas" />
+        </fieldset>
+        <fieldset>
+            <legend>Mot de passe</legend>
+            <input type="password"
+                class="form-control"
+                name="Password"
+                id="Password"
+                placeholder="Mot de passe"
+                required
+                RequireMessage='Veuillez entrer un mot de passe'
+                InvalidMessage='Mot de passe trop court' />
+            <input class="form-control MatchedInput"
+                type="password"
+                matchedInputId="Password"
+                name="matchedPassword"
+                id="matchedPassword"
+                placeholder="Vérification"
+                required
+                InvalidMessage="Ne correspond pas au mot de passe" />
+        </fieldset>
+        <fieldset>
+            <legend>Nom</legend>
+            <input type="text"
+                class="form-control Alpha"
+                name="Name"
+                id="Name"
+                placeholder="Nom"
+                required
+                RequireMessage='Veuillez entrer votre nom'
+                InvalidMessage='Nom invalide' />
+        </fieldset>
+        <fieldset>
+            <legend>Avatar</legend>
+            <div class='imageUploader'
+                newImage='true'
+                controlId='Avatar'
+                imageSrc='images/no-avatar.png'
+                waitingImage="images/Loading_icon.gif">
+            </div>
+        </fieldset>
+        <input type='submit'
+            name='submit'
+            id='saveUserCmd'
+            value="Enregistrer"
+            class="form-control btn-primary">
+    </form>
+    <div class="cancel">
+        <button class="form-control btn-secondary" id="abortCmd">Annuler</button>
+    </div>
+    `);
+    $('#loginCmd').on('click', renderLogin); // call back sur clic
+    initFormValidation();
+    initImageUploaders();
+    $('#abortCmd').on('click', renderLogin); // call back sur clic
+    // ajouter le mécanisme de vérification de doublon de courriel 
+    addConflictValidation(API.checkConflictURL(), 'Email', 'saveUser');
+    // call back la soumission du formulaire 
+    $('#createProfilForm').on("submit", function (event) {
+        let profil = getFormData($('#createProfilForm'));
+        delete profil.matchedPassword;
+        delete profil.matchedEmail;
+        event.preventDefault();// empêcher le fureteur de soumettre une requête de soumission 
+        showWaitingGif(); // afficher GIF d’attente 
+        API.register(profil); // commander la création au service API
+        renderLogin("Votre compte a été créé. Veuillez prendre vos courriels pour récupérer votre code de vérification qui vous sera demandé lors de votre prochaine connexion.");
+    });
 }
-function renderCreateProfile() {
-    renderProfileForm({ Id: 0, Name: "", Email: "", Avatar: "images/no-avatar.png" }, "Inscription", "createProfile");
-}
-function renderProfileForm(loggedUser, headerName, headerId) {
-    pageManager(1, headerName, headerId);
+function renderEditProfil() {
+    //need to get loggedUser
+    noTimeout();
+    eraseContent();
+    updateHeader("Profil", "editProfil");
+    $("#newPhotoCmd").hide();
     $("#content").append(
         $(`
             <form class="form" id="editProfilForm">
@@ -259,35 +385,30 @@ function renderProfileForm(loggedUser, headerName, headerId) {
                     <button class="form-control btn-warning">Effacer le compte</button>
                 </a>
             </div>
-        `))
+        `));
+    $('#loginCmd').on('click', renderLogin);
+    initFormValidation();
+    initImageUploaders();
+    $('#abortCmd').on('click', renderLogin);
+    addConflictValidation(API.checkConflictURL(), 'Email', 'saveUser');
+    $('#editProfilForm').on("submit", function (event) {
+        let profil = getFormData($('#editProfilForm'));
+        delete profil.matchedPassword;
+        delete profil.matchedEmail;
+        event.preventDefault();
+        showWaitingGif();
+        modifyUserProfil(profil);
+    });
 }
 function renderError() {
-    pageManager(1, "Problème", "error");
-
+    timeout();
+    eraseContent();
+    updateHeader("Problème", "error");
+    $("#newPhotoCmd").hide();
     $("#content").append(
         $(`
             
         `))
-}
-function pageManager(timeoutType, headerName, headerId) {
-    switch (timeoutType) {
-        case 0:
-            timeout();
-            break;
-        case 1:
-            noTimeout();
-            break;
-        case 2:
-            initTimeout();
-            break;
-        default:
-            timeout();
-    }
-    timeout();
-    saveContentScrollPosition();
-    eraseContent();
-    updateHeader(headerName, headerId);
-    updateDropDownMenu();
 }
 async function Init_UI() {
     //currentETag = await Bookmarks_API.HEAD();
