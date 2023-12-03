@@ -55,6 +55,8 @@ export default class AccountsController extends Controller {
     }
 
     sendVerificationEmail(user) {
+        // bypass model bindeExtraData wich hide the user verifyCode
+        user = this.repository.findByField("Id", user.Id);
         let html = `
                 Bonjour ${user.Name}, <br /> <br />
                 Voici votre code pour confirmer votre adresse de courriel
@@ -122,7 +124,7 @@ export default class AccountsController extends Controller {
             let newUser = this.repository.add(user);
             if (this.repository.model.state.isValid) {
                 this.HttpContext.response.created(newUser);
-                this.sendVerificationEmail(user);
+                this.sendVerificationEmail(newUser);
             } else {
                 if (this.repository.model.state.inConflict)
                     this.HttpContext.response.conflict(this.repository.model.state.errors);
@@ -169,7 +171,12 @@ export default class AccountsController extends Controller {
     }
     // GET:account/remove/id
     remove(id) { // warning! this is not an API endpoint
-        if (Authorizations.writeGranted(this.HttpContext, Authorizations.user()))
+        if (Authorizations.writeGranted(this.HttpContext, Authorizations.user())) {
+            this.tokensRepository.keepByFilter(token => token.User.Id != id);
+            let previousAuthorization = this.authorizations;
+            this.authorizations = Authorizations.user();
             super.remove(id);
+            this.authorizations = previousAuthorization;
+        }
     }
 }

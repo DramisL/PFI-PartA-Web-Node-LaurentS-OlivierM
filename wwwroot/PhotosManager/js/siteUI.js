@@ -23,9 +23,7 @@ function getFormData($form) {
     return jsonObject;
 }
 function updateHeader(title, id) {
-    let loggedUser;
-    /*loggedUser = { Id: 1, Name: "Olivier Morin", Email: "", Avatar: "images/no-avatar.png" }*//*Remplacer par get user*/
-
+    let loggedUser = API.retrieveLoggedUser();
     $("#header").html(
         $(`
             <span title="Liste des photos" id="listPhotosCmd"> <img src="images/PhotoCloudLogo.png" class="appLogo"></span>
@@ -49,11 +47,18 @@ function updateHeader(title, id) {
     updateDropDownMenu();
 }
 function updateDropDownMenu() {
+    let loggedUser = API.retrieveLoggedUser();
     let DDMenu = $("#DDMenu");
     DDMenu.empty();
-    DDMenu.append($(`
-        <span class="dropdown-item" id="loginCmd"><i class="menuIcon fa fa-sign-in mx-2"></i>Connexion</span>
-    `));
+    if (loggedUser == null) {
+        DDMenu.append($(`
+            <span class="dropdown-item" id="loginCmd"><i class="menuIcon fa fa-sign-in mx-2"></i>Connexion</span>
+        `));
+    } else {
+        DDMenu.append($(`
+            <span class="dropdown-item" id="logoutCmd"><i class="menuIcon fa fa-sign-out mx-2"></i>Déconnexion</span>
+        `));
+    }
     DDMenu.append($(`<div class="dropdown-divider"></div>`));
     //let selectedCategory = "";
     //let selectClass = selectedCategory === "" ? "fa-check" : "fa-fw";
@@ -101,8 +106,10 @@ function updateDropDownMenu() {
         saveContentScrollPosition();
         renderLogin();
     });
-    $('#logout').on("click", async function () {
-        //logout()?
+    $('#logoutCmd').on("click", async function () {
+        API.logout().then(() => {
+            renderLogin();
+        });
     });
     $('#editProfilMenuCmd').on("click", async function () {
         saveContentScrollPosition();
@@ -206,6 +213,30 @@ function renderLogin(loginMessage = "") {
         `));
     $('#createProfilCmd').on("click", async function () {
         renderCreateProfil();
+    });
+
+    initFormValidation();
+    // call back la soumission du formulaire 
+    $('#loginForm').on("submit", function (event) {
+        let profil = getFormData($('#loginForm'));
+        event.preventDefault();// empêcher le fureteur de soumettre une requête de soumission
+        API.login(profil.Email, profil.Password).then(() => {
+            console.log(API.currentStatus);
+            switch (API.currentStatus) {
+                case 0:
+                    renderListPhotos();
+                    break;
+                case 480:
+                    renderCodeVerification();
+                    break;
+                case 481:
+                    EmailError = "Courriel introuvable";
+                    break;
+                case 482:
+                    passwordError = "Mot de passe incorrect";
+                    break;
+            }
+        });
     });
 }
 function renderCreateProfil() {
