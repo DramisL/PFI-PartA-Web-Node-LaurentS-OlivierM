@@ -111,9 +111,13 @@ function updateDropDownMenu() {
             renderLogin();
         });
     });
-    $('#editProfilMenuCmd').on("click", async function () {
+    $('#editProfilCmd').on("click", async function () {
         saveContentScrollPosition();
-        renderEditProfile();
+        renderEditProfil();
+    });
+    $('#listPhotosCmd').on("click", async function () {
+        saveContentScrollPosition();
+        renderListPhotos();
     });
     $('#listPhotosMenuCmd').on("click", async function () {
         saveContentScrollPosition();
@@ -169,7 +173,15 @@ function renderAbout() {
                     d'interface utilisateur monopage réactive.
                 </p>
                 <p>
-                    Auteur: Nicolas Chourot
+                    Auteur: Laurent Simard et Olvier Morin
+                </p>
+                <p>
+                    Fait à partir du code de base fourni par Nicolas Chourot
+                </p>
+                <p>
+                    <a href="https://github.com/DramisL/PFI-PartA-Web-Node-LaurentS-OlivierM">
+                        Lien du répertoire GitHub
+                    </a>
                 </p>
                 <p>
                     Collège Lionel-Groulx, automne 2023
@@ -219,15 +231,10 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
     $('#loginForm').on("submit", function (event) {
         let profil = getFormData($('#loginForm'));
         event.preventDefault();// empêcher le fureteur de soumettre une requête de soumission
+        API.eraseAccessToken();
         API.login(profil.Email, profil.Password).then(() => {
             switch (API.currentStatus) {
-                case 481:
-                    renderLogin("", profil.Email, "Courriel introuvable");
-                    break;
-                case 482:
-                    renderLogin("", profil.Email, "", "Mot de passe incorrect");
-                    break;
-                default:
+                case 0:
                     let loggedUser = API.retrieveLoggedUser();
                     if (loggedUser.VerifyCode == "verified") {
                         renderListPhotos();
@@ -235,11 +242,20 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
                         renderCodeVerification(loggedUser.Id);
                     }
                     break;
+                case 481:
+                    renderLogin("", profil.Email, "Courriel introuvable");
+                    break;
+                case 482:
+                    renderLogin("", profil.Email, "", "Mot de passe incorrect");
+                    break;
+                default:
+                    renderError();
+                    break;
             }
         });
     });
 }
-function renderCodeVerification(Id) {
+function renderCodeVerification() {
     noTimeout();
     eraseContent();
     updateHeader("Vérification", "verify");
@@ -350,10 +366,14 @@ function renderCreateProfil() {
         <button class="form-control btn-secondary" id="abortCmd">Annuler</button>
     </div>
     `);
-    $('#loginCmd').on('click', renderLogin); // call back sur clic
+    $('#loginCmd').on("click", async function () {
+        renderLogin();
+    });
     initFormValidation();
     initImageUploaders();
-    $('#abortCmd').on('click', renderLogin); // call back sur clic
+    $('#abortCmd').on("click", async function () {
+        renderLogin();
+    });
     // ajouter le mécanisme de vérification de doublon de courriel 
     addConflictValidation(API.checkConflictURL(), 'Email', 'saveUser');
     // call back la soumission du formulaire 
@@ -368,7 +388,7 @@ function renderCreateProfil() {
     });
 }
 function renderEditProfil() {
-    //need to get loggedUser
+    let loggedUser = API.retrieveLoggedUser();
     noTimeout();
     eraseContent();
     updateHeader("Profil", "editProfil");
@@ -446,15 +466,18 @@ function renderEditProfil() {
                 <button class="form-control btn-secondary" id="abortCmd">Annuler</button>
             </div>
             <div class="cancel">
-                <hr> <a href="confirmDeleteProfil.php">
-                    <button class="form-control btn-warning">Effacer le compte</button>
-                </a>
+                <hr> <button class="form-control btn-warning" id="deleteCmd">Effacer le compte</button>
             </div>
         `));
-    $('#loginCmd').on('click', renderLogin);
+    $('#loginCmd').on("click", async function () {
+        renderLogin();
+    });
     initFormValidation();
     initImageUploaders();
-    $('#abortCmd').on('click', renderLogin);
+    $('#abortCmd').on("click", async function () {
+        renderLogin();
+    });
+    $('#deleteCmd').on('click', renderDelete);
     addConflictValidation(API.checkConflictURL(), 'Email', 'saveUser');
     $('#editProfilForm').on("submit", function (event) {
         let profil = getFormData($('#editProfilForm'));
@@ -462,7 +485,39 @@ function renderEditProfil() {
         delete profil.matchedEmail;
         event.preventDefault();
         showWaitingGif();
-        modifyUserProfil(profil);
+        API.modifyUserProfil(profil).then(() => {
+            renderEditProfil();
+        });
+    });
+}
+function renderDelete() {
+    timeout();
+    eraseContent();
+    updateHeader("Retrait de compte", "delete");
+    $("#newPhotoCmd").hide();
+    $("#content").append(
+        $(`
+        <div class="content" style="text-align:center">
+            <div class="form">
+                <h3>Voulez-vous vraiment effacer votre compte?</h3>
+            </div>
+            <div class="form">
+                <button class="form-control btn-danger" id="deleteCmd">Effacer mon compte</button>
+            </div>
+            <div class="cancel">
+                <button class="form-control btn-secondary" id="abortCmd">Annuler</button>
+            </div>
+        </div>
+        `));
+    $('#deleteCmd').on("click", async function () {
+        API.unsubscribeAccount(API.retrieveLoggedUser().Id).then(() => {
+            API.logout().then(() => {
+                renderLogin();
+            });
+        });
+    });
+    $('#abortCmd').on("click", async function () {
+        renderLogin();
     });
 }
 function renderError() {
@@ -472,8 +527,19 @@ function renderError() {
     $("#newPhotoCmd").hide();
     $("#content").append(
         $(`
-            
-        `))
+        <div class="content" style="text-align:center">
+            <div class="form">
+                <h3><span style='color:red'>Le serveur ne répond pas</span></h3>
+            </div>
+            <hr>
+            <div class="form">
+                <button class="form-control btn-primary" id="loginCmd">Connexion</button>
+            </div>
+        </div>
+        `));
+    $('#loginCmd').on("click", async function () {
+        renderLogin();
+    });
 }
 async function Init_UI() {
     //currentETag = await Bookmarks_API.HEAD();
