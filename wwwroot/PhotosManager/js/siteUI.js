@@ -56,10 +56,20 @@ function updateDropDownMenu() {
     let DDMenu = $("#DDMenu");
     DDMenu.empty();
     if (loggedUser == null) {
+
         DDMenu.append($(`
-            <span class="dropdown-item" id="loginCmd"><i class="menuIcon fa fa-sign-in mx-2"></i>Connexion</span>
+        <span class="dropdown-item" id="loginCmd"><i class="menuIcon fa fa-sign-in mx-2"></i>Connexion</span>
         `));
     } else {
+        if (loggedUser.Authorizations["readAccess"] == 2 && loggedUser.Authorizations["writeAccess"] == 2) {
+            DDMenu.append($(`
+            <span class="dropdown-item" id="manageUserCmd">
+<i class="menuIcon fas fa-user-cog mx-2"></i>
+Gestion des usagers
+</span>
+        `));
+            DDMenu.append($(`<div class="dropdown-divider"></div>`));
+        }
         DDMenu.append($(`
             <span class="dropdown-item" id="logoutCmd"><i class="menuIcon fa fa-sign-out mx-2"></i>Déconnexion</span>
         `));
@@ -130,6 +140,7 @@ function updateDropDownMenu() {
         saveContentScrollPosition();
         renderAbout();
     });
+
 }
 function renderListPhotos() {
     timeout();
@@ -141,11 +152,58 @@ function renderListPhotos() {
         `));
     restoreContentScrollPosition();
 }
-function renderManageUser() {
+async function renderManageUser() {
     timeout();
     eraseContent();
     updateHeader("Gestion des usagers", "manageUser");
     $("#newPhotoCmd").hide();
+    let contacts = await API.GetAccounts();
+    if (contacts !== null) {
+        contacts["data"].forEach(contact => {
+            if (contact["Id"] != API.retrieveLoggedUser().Id)
+                $("#content").append(renderUser(contact));
+        });
+        restoreContentScrollPosition();
+        // Attached click events on command icons
+        $(".editCmd").on("click", function () {
+            saveContentScrollPosition();
+            renderEditContactForm($(this).attr("editContactId"));
+        });
+        $(".deleteCmd").on("click", function () {
+            saveContentScrollPosition();
+            renderDelete(contacts["data"].find(user => user["Id"] == $(this).attr("deleteContactId")));
+        });
+        $(".addAdminCmd").on("click", function () {
+            saveContentScrollPosition();
+            let profilToUpdate = contacts["data"].find(user => user["Id"] == $(this).attr("editContactId"));
+            profilToUpdate.Authorizations["readAccess"] = 2;
+            profilToUpdate.Authorizations["writeAccess"] = 2;
+            profilToUpdate.Password = "";
+            API.modifyUserProfil(profilToUpdate, API.retrieveLoggedUser());
+            renderManageUser();
+        });
+        $(".removeAdminCmd").on("click", function () {
+            saveContentScrollPosition();
+            let profilToUpdate = contacts["data"].find(user => user["Id"] == $(this).attr("editContactId"));
+            profilToUpdate.Authorizations["readAccess"] = 1;
+            profilToUpdate.Authorizations["writeAccess"] = 1;
+            profilToUpdate.Password = "";
+            API.modifyUserProfil(profilToUpdate, API.retrieveLoggedUser());
+            renderManageUser();
+        });
+        $(".deleteCmd").on("click", function () {
+            saveContentScrollPosition();
+            renderDelete(contacts["data"].find(user => user["Id"] == $(this).attr("deleteContactId")));
+        });
+        $(".deleteCmd").on("click", function () {
+            saveContentScrollPosition();
+            renderDelete(contacts["data"].find(user => user["Id"] == $(this).attr("deleteContactId")));
+        });
+        $(".contactRow").on("click", function (e) { e.preventDefault(); })
+
+    } else {
+        renderError("Service introuvable");
+    }
     $("#content").append(
         $(`
             
@@ -496,32 +554,61 @@ function renderEditProfil() {
         });
     });
 }
-function renderDelete() {
+async function renderDelete(user = null) {
     timeout();
     eraseContent();
     updateHeader("Retrait de compte", "delete");
     $("#newPhotoCmd").hide();
-    $("#content").append(
-        $(`
-        <div class="content" style="text-align:center">
+    if (user == null) {
+
+        $("#content").append(
+            $(`
+            <div class="content" style="text-align:center">
             <div class="form">
-                <h3>Voulez-vous vraiment effacer votre compte?</h3>
+            <h3>Voulez-vous vraiment effacer votre compte?</h3>
             </div>
             <div class="form">
-                <button class="form-control btn-danger" id="deleteCmd">Effacer mon compte</button>
+            <button class="form-control btn-danger" id="deleteCmd">Effacer mon compte</button>
             </div>
             <div class="cancel">
-                <button class="form-control btn-secondary" id="abortCmd">Annuler</button>
+            <button class="form-control btn-secondary" id="abortCmd">Annuler</button>
+            </div>
+            </div>
+        `));
+        $('#deleteCmd').on("click", async function () {
+            API.unsubscribeAccount(API.retrieveLoggedUser().Id).then(() => {
+                logout();
+            });
+        });
+    } else {
+        $("#content").append(
+            $(`
+        <div class="content" style="text-align:center">
+            <div class="form">
+            <h3>Voulez-vous vraiment effacer cet usager et toutes ces photos?</h3>
+        </div>
+        <div class="UserLayout" style="text-align:center">
+            <div class="UserAvatar" style="background-image:url('${user.Avatar}')"></div>
+            <div class="UserInfo">
+                <span class="UserName">${user.Name}</span>
+                <a href="mailto:${user.Email}" class="UserEmail" target="_blank" >${user.Email}</a>
             </div>
         </div>
-        `));
-    $('#deleteCmd').on("click", async function () {
-        API.unsubscribeAccount(API.retrieveLoggedUser().Id).then(() => {
-            logout();
+        <div class="form">
+        <button class="form-control btn-danger" id="deleteCmd">Effacer</button>
+        </div>
+        <div class="cancel">
+        <button class="form-control btn-secondary" id="abortCmd">Annuler</button>
+        </div>
+        </div>
+    `));
+        $('#deleteCmd').on("click", async function () {
+            API.unsubscribeAccount(user["Id"]);
+            renderListPhotos();
         });
-    });
+    }
     $('#abortCmd').on("click", async function () {
-        renderLogin();
+        renderListPhotos();
     });
 }
 function renderError() {
@@ -545,10 +632,43 @@ function renderError() {
         renderLogin();
     });
 }
+function renderUser(contact) {
+    let adminAccessToogle;
+    let userBlockToogleButton;
+
+    if (contact.Authorizations["readAccess"] == 2 && contact.Authorizations["writeAccess"] == 2){
+        adminAccessToogle = `<span class="removeAdminCmd dodgerblueCmd fas fa-user-cog" editContactId="${contact.Id}" title="Usager / promouvoir administrateur"></span>`;
+    } else {
+        adminAccessToogle = `<span class="addAdminCmd dodgerblueCmd fas fa-user-alt" editContactId="${contact.Id}" title="Administrateur / retirer les droits administrateur"></span>`;
+    }
+
+    if (contact.isBlocked){
+        userBlockToogleButton = `<span class="removeBlockedCmd redCmd fa fa-ban" editContactId="${contact.Id}" title="Usager bloqué / débloquer l’accès"></span>`;
+    } else {
+        userBlockToogleButton = `<span class="addBlockedCmd fa-regular fa-circle greenCmd" editContactId="${contact.Id}" title="Usager non bloqué / bloquer l’accès"></span>`;
+    }
+
+    return $(`
+     <div class="UserRow" contact_id=${contact.Id}">
+        <div class="UserContainer noselect">
+            <div class="UserLayout">
+                 <div class="UserAvatar" style="background-image:url('${contact.Avatar}')"></div>
+                 <div class="UserInfo">
+                    <span class="UserName">${contact.Name}</span>
+                    <a href="mailto:${contact.Email}" class="UserEmail" target="_blank" >${contact.Email}</a>
+                </div>
+            </div>
+            <div class="UserCommandPanel">` + adminAccessToogle + userBlockToogleButton + 
+                `<span class="deleteCmd goldenrodCmd fas fa-user-slash" deleteContactId="${contact.Id}" title="Effacer ${contact.Name}"></span>
+            </div>
+        </div>
+    </div>           
+    `);
+}
 async function Init_UI() {
     //currentETag = await Bookmarks_API.HEAD();
-    //renderListPhotos();
-    renderLogin();
+    renderListPhotos();
+    //renderLogin();
     //start_Periodic_Refresh();
 }
 Init_UI();
