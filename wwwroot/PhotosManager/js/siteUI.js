@@ -177,12 +177,11 @@ function renderAbout() {
             </div>
         `));
 }
-function renderLogin(loginMessage = "") {
+function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordError = "") {
     noTimeout();
     eraseContent();
     updateHeader("Connexion", "connect");
     $("#newPhotoCmd").hide();
-    let Email = EmailError = passwordError = "";
     $("#content").append(
         $(`
         <div class="content" style="text-align:center">
@@ -221,21 +220,56 @@ function renderLogin(loginMessage = "") {
         let profil = getFormData($('#loginForm'));
         event.preventDefault();// empêcher le fureteur de soumettre une requête de soumission
         API.login(profil.Email, profil.Password).then(() => {
-            console.log(API.currentStatus);
             switch (API.currentStatus) {
-                case 0:
-                    renderListPhotos();
-                    break;
-                case 480:
-                    renderCodeVerification();
-                    break;
                 case 481:
-                    EmailError = "Courriel introuvable";
+                    renderLogin("", profil.Email, "Courriel introuvable");
                     break;
                 case 482:
-                    passwordError = "Mot de passe incorrect";
+                    renderLogin("", profil.Email, "", "Mot de passe incorrect");
+                    break;
+                default:
+                    let loggedUser = API.retrieveLoggedUser();
+                    if (loggedUser.VerifyCode == "verified") {
+                        renderListPhotos();
+                    } else {
+                        renderCodeVerification(loggedUser.Id);
+                    }
                     break;
             }
+        });
+    });
+}
+function renderCodeVerification(Id) {
+    noTimeout();
+    eraseContent();
+    updateHeader("Vérification", "verify");
+    $("#newPhotoCmd").hide();
+    let error = "";
+    $("#content").append(
+        $(`
+        <div class="content" style="text-align:center">
+            <h3>Veuillez entrer le code de vérification que vous avez reçu par courriel</h3>
+            <form class="form" id="verifyProfilForm">
+                <input type='text'
+                    name='verificationCode'
+                    class="form-control"
+                    required
+                    RequireMessage='Veuillez entrer votre code de vérification'
+                    InvalidMessage='Code de vérification invalide'
+                    placeholder="Code de vérification de courriel">
+                <span style='color:red'>${error}</span>
+                <input type='submit' name='submit' value="Vérifier" class="form-control btn-primary">
+            </form>
+        </div>
+        `));
+
+    initFormValidation();
+    // call back la soumission du formulaire 
+    $('#verifyProfilForm').on("submit", function (event) {
+        let form = getFormData($('#verifyProfilForm'));
+        event.preventDefault();// empêcher le fureteur de soumettre une requête de soumission
+        API.verifyEmail(API.retrieveLoggedUser().Id, form.verificationCode).then(() => {
+            renderListPhotos();
         });
     });
 }
@@ -443,7 +477,8 @@ function renderError() {
 }
 async function Init_UI() {
     //currentETag = await Bookmarks_API.HEAD();
-    renderListPhotos();
+    //renderListPhotos();
+    renderLogin();
     //start_Periodic_Refresh();
 }
 Init_UI();
