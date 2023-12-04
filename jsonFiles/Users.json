@@ -10,6 +10,7 @@
             "readAccess": 1,
             "writeAccess": 1
         },
+        "isBlocked":false,
         "VerifyCode": "verified"
     },
     {
@@ -23,6 +24,7 @@
             "readAccess": 2,
             "writeAccess": 2
         },
+        "isBlocked":false,
         "VerifyCode": "verified"
     }
 ]

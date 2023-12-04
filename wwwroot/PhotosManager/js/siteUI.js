@@ -22,6 +22,11 @@ function getFormData($form) {
     });
     return jsonObject;
 }
+function logout() {
+    API.logout().then(() => {
+        renderLogin();
+    });
+}
 function updateHeader(title, id) {
     let loggedUser = API.retrieveLoggedUser();
     $("#header").html(
@@ -107,9 +112,7 @@ function updateDropDownMenu() {
         renderLogin();
     });
     $('#logoutCmd').on("click", async function () {
-        API.logout().then(() => {
-            renderLogin();
-        });
+        logout();
     });
     $('#editProfilCmd').on("click", async function () {
         saveContentScrollPosition();
@@ -237,7 +240,10 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
                 case 0:
                     let loggedUser = API.retrieveLoggedUser();
                     if (loggedUser.VerifyCode == "verified") {
-                        renderListPhotos();
+                        if (!loggedUser.isBlocked)
+                            renderListPhotos();
+                        else
+                            loginMessage = "Votre compte a été bloqué par l'administrateur";
                     } else {
                         renderCodeVerification(loggedUser.Id);
                     }
@@ -511,9 +517,7 @@ function renderDelete() {
         `));
     $('#deleteCmd').on("click", async function () {
         API.unsubscribeAccount(API.retrieveLoggedUser().Id).then(() => {
-            API.logout().then(() => {
-                renderLogin();
-            });
+            logout();
         });
     });
     $('#abortCmd').on("click", async function () {
