@@ -31,9 +31,14 @@ export default class AccountsController extends Controller {
                 let user = this.repository.findByField("Email", loginInfo.Email);
                 if (user != null) {
                     if (user.Password == loginInfo.Password) {
-                        user = this.repository.get(user.Id);
-                        let newToken = TokenManager.create(user);
-                        this.HttpContext.response.created(newToken);
+                        if (user.isBlocked){
+                            this.HttpContext.response.userBlocked("This user is blocked!");
+
+                        }else{
+                            user = this.repository.get(user.Id);
+                            let newToken = TokenManager.create(user);
+                            this.HttpContext.response.created(newToken);
+                        }
                     } else {
                         this.HttpContext.response.wrongPassword("Wrong password.");
                     }
@@ -117,6 +122,7 @@ export default class AccountsController extends Controller {
             let verifyCode = utilities.makeVerifyCode(6);
             user.VerifyCode = verifyCode;
             user.Authorizations = Authorizations.user();
+            user.isBlocked = false;
             let newUser = this.repository.add(user);
             if (this.repository.model.state.isValid) {
                 this.HttpContext.response.created(newUser);
@@ -137,9 +143,20 @@ export default class AccountsController extends Controller {
         if (Authorizations.writeGranted(this.HttpContext, Authorizations.user())) {
             if (this.repository != null) {
                 user.Created = utilities.nowInSeconds();
+                //FoundedUser = valeur Original
                 let foundedUser = this.repository.findByField("Id", user.Id);
                 if (foundedUser != null) {
-                    user.Authorizations = foundedUser.Authorizations; // user cannot change its own authorizations
+                    if (user.adminSender == null ){
+                        user.Authorizations = foundedUser.Authorizations; // user cannot change its own authorizations if he is its own sender
+                    } else {
+                        let foundedAdminSender = this.repository.findByField("Id", user.adminSender);
+                        if (foundedAdminSender.Authorizations["readAccess"] != 2 || foundedAdminSender.Authorizations["writeAccess"] != 2 ){
+                            user.Authorizations = foundedUser.Authorizations;
+                            user.isBlocked = foundedUser.isBlocked;
+                        }
+                        user.Avatar = foundedUser.Avatar;
+                        user.adminSender = undefined;
+                    }
                     user.VerifyCode = foundedUser.VerifyCode;
                     if (user.Password == '') { // password not changed
                         user.Password = foundedUser.Password;

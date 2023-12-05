@@ -179,7 +179,8 @@ async function renderManageUser() {
             profilToUpdate.Authorizations["readAccess"] = 2;
             profilToUpdate.Authorizations["writeAccess"] = 2;
             profilToUpdate.Password = "";
-            API.modifyUserProfil(profilToUpdate, API.retrieveLoggedUser());
+            profilToUpdate.adminSender = API.retrieveLoggedUser().Id
+            API.modifyUserPrivilege(profilToUpdate);
             renderManageUser();
         });
         $(".removeAdminCmd").on("click", function () {
@@ -188,16 +189,27 @@ async function renderManageUser() {
             profilToUpdate.Authorizations["readAccess"] = 1;
             profilToUpdate.Authorizations["writeAccess"] = 1;
             profilToUpdate.Password = "";
-            API.modifyUserProfil(profilToUpdate, API.retrieveLoggedUser());
+            profilToUpdate.adminSender = API.retrieveLoggedUser().Id
+            API.modifyUserPrivilege(profilToUpdate);
             renderManageUser();
         });
-        $(".deleteCmd").on("click", function () {
+        $(".addBlockedCmd").on("click", function () {
             saveContentScrollPosition();
-            renderDelete(contacts["data"].find(user => user["Id"] == $(this).attr("deleteContactId")));
+            let profilToUpdate = contacts["data"].find(user => user["Id"] == $(this).attr("editContactId"));
+            profilToUpdate.isBlocked = true;
+            profilToUpdate.Password = "";
+            profilToUpdate.adminSender = API.retrieveLoggedUser().Id
+            API.modifyUserPrivilege(profilToUpdate);
+            renderManageUser();
         });
-        $(".deleteCmd").on("click", function () {
+        $(".removeBlockedCmd").on("click", function () {
             saveContentScrollPosition();
-            renderDelete(contacts["data"].find(user => user["Id"] == $(this).attr("deleteContactId")));
+            let profilToUpdate = contacts["data"].find(user => user["Id"] == $(this).attr("editContactId"));
+            profilToUpdate.isBlocked = false;
+            profilToUpdate.Password = "";
+            profilToUpdate.adminSender = API.retrieveLoggedUser().Id
+            API.modifyUserPrivilege(profilToUpdate);
+            renderManageUser();
         });
         $(".contactRow").on("click", function (e) { e.preventDefault(); })
 
@@ -297,13 +309,10 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
             switch (API.currentStatus) {
                 case 0:
                     let loggedUser = API.retrieveLoggedUser();
-                    if (loggedUser.VerifyCode == "verified") {
-                        if (!loggedUser.isBlocked)
-                            renderListPhotos();
-                        else
-                            loginMessage = "Votre compte a été bloqué par l'administrateur";
-                    } else {
+                    if (loggedUser.VerifyCode != "verified") {
                         renderCodeVerification(loggedUser.Id);
+                    } else{
+                        renderListPhotos();
                     }
                     break;
                 case 481:
@@ -311,6 +320,9 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
                     break;
                 case 482:
                     renderLogin("", profil.Email, "", "Mot de passe incorrect");
+                    break;
+                    case 483:
+                    renderLogin("Votre compte a été bloqué par l'administrateur", profil.Email);
                     break;
                 default:
                     renderError();
