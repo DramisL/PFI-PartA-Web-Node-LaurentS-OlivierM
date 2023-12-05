@@ -143,7 +143,6 @@ Gestion des usagers
 
 }
 function renderListPhotos() {
-    timeout();
     eraseContent();
     updateHeader("Liste des photos", "listPhotos");
     $("#content").append(
@@ -153,7 +152,14 @@ function renderListPhotos() {
     restoreContentScrollPosition();
 }
 async function renderManageUser() {
-    timeout();
+    let currentUser = API.retrieveLoggedUser();
+    if ( currentUser != null){
+        if(currentUser.Authorizations["readAccess"] != 2 || currentUser.Authorizations["writeAccess"] != 2){
+            renderListPhotos();
+        }
+    }else{
+        renderLogin();
+    }
     eraseContent();
     updateHeader("Gestion des usagers", "manageUser");
     $("#newPhotoCmd").hide();
@@ -221,18 +227,7 @@ async function renderManageUser() {
             
         `))
 }
-function renderEmailValidation() {
-    timeout();
-    eraseContent();
-    updateHeader("Gestion des usagers", "manageUser");
-    $("#newPhotoCmd").hide();
-    $("#content").append(
-        $(`
-            
-        `))
-}
 function renderAbout() {
-    timeout();
     eraseContent();
     updateHeader("À propos...", "about");
     $("#newPhotoCmd").hide();
@@ -263,7 +258,6 @@ function renderAbout() {
         `));
 }
 function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordError = "") {
-    noTimeout();
     eraseContent();
     updateHeader("Connexion", "connect");
     $("#newPhotoCmd").hide();
@@ -312,6 +306,8 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
                     if (loggedUser.VerifyCode != "verified") {
                         renderCodeVerification(loggedUser.Id);
                     } else{
+                        initTimeout(TimeOutExpireTime);
+                        timeout();
                         renderListPhotos();
                     }
                     break;
@@ -332,7 +328,6 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
     });
 }
 function renderCodeVerification() {
-    noTimeout();
     eraseContent();
     updateHeader("Vérification", "verify");
     $("#newPhotoCmd").hide();
@@ -366,7 +361,6 @@ function renderCodeVerification() {
     });
 }
 function renderCreateProfil() {
-    noTimeout(); // ne pas limiter le temps d’inactivité 
     eraseContent(); // effacer le conteneur #content 
     updateHeader("Inscription", "createProfil"); // mettre à jour l’entête et menu
     $("#newPhotoCmd").hide(); // camoufler l’icone de commande d’ajout de photo
@@ -467,8 +461,6 @@ function renderCreateProfil() {
     });
 }
 function renderEditProfil() {
-    let loggedUser = API.retrieveLoggedUser();
-    noTimeout();
     eraseContent();
     updateHeader("Profil", "editProfil");
     $("#newPhotoCmd").hide();
@@ -572,7 +564,9 @@ function renderEditProfil() {
     });
 }
 async function renderDelete(user = null) {
-    timeout();
+    if (API.retrieveLoggedUser() == null){
+        renderLogin();
+    }
     eraseContent();
     updateHeader("Retrait de compte", "delete");
     $("#newPhotoCmd").hide();
@@ -593,6 +587,7 @@ async function renderDelete(user = null) {
         `));
         $('#deleteCmd').on("click", async function () {
             API.unsubscribeAccount(API.retrieveLoggedUser().Id).then(() => {
+                noTimeout();
                 logout();
             });
         });
@@ -628,7 +623,6 @@ async function renderDelete(user = null) {
     });
 }
 function renderError() {
-    timeout();
     eraseContent();
     updateHeader("Problème", "error");
     $("#newPhotoCmd").hide();
