@@ -445,6 +445,9 @@ function renderCreateProfil() {
         let profil = getFormData($('#createProfilForm'));
         delete profil.matchedPassword;
         delete profil.matchedEmail;
+        if(!profil.Avatar) {
+            profil.Avatar = "no-avatar.png";
+        }
         event.preventDefault();// empêcher le fureteur de soumettre une requête de soumission 
         showWaitingGif(); // afficher GIF d’attente 
         API.register(profil); // commander la création au service API
@@ -541,7 +544,9 @@ function renderEditProfil() {
     $('#abortCmd').on("click", async function () {
         renderListPhotos();
     });
-    $('#deleteCmd').on('click', renderDelete);
+    $('#deleteCmd').on('click', async function () {
+        renderDelete();
+    });
     addConflictValidation(API.checkConflictURL(), 'Email', 'saveUser');
     $('#editProfilForm').on("submit", function (event) {
         let profil = getFormData($('#editProfilForm'));
@@ -560,7 +565,6 @@ async function renderDelete(user = null) {
     updateHeader("Retrait de compte", "delete");
     $("#newPhotoCmd").hide();
     if (user == null) {
-
         $("#content").append(
             $(`
             <div class="content" style="text-align:center">
@@ -662,7 +666,7 @@ function renderUser(contact) {
                 `<span class="deleteCmd goldenrodCmd fas fa-user-slash" deleteContactId="${contact.Id}" title="Effacer ${contact.Name}"></span>
             </div>
         </div>
-    </div>           
+    </div>
     `);
 }
 async function Init_UI() {
