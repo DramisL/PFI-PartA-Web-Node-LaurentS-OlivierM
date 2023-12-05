@@ -266,7 +266,7 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
                     required
                     RequireMessage='Veuillez entrer votre courriel'
                     InvalidMessage='Courriel invalide'
-                    placeholder="adresse de courriel"
+                    placeholder="Adresse de courriel"
                     value='${Email}'>
                 <span style='color:red'>${EmailError}</span>
                 <input type='password'
@@ -539,7 +539,7 @@ function renderEditProfil() {
     initFormValidation();
     initImageUploaders();
     $('#abortCmd').on("click", async function () {
-        renderLogin();
+        renderListPhotos();
     });
     $('#deleteCmd').on('click', renderDelete);
     addConflictValidation(API.checkConflictURL(), 'Email', 'saveUser');
