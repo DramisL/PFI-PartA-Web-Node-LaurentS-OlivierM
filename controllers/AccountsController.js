@@ -147,16 +147,17 @@ export default class AccountsController extends Controller {
                 let foundedUser = this.repository.findByField("Id", user.Id);
                 if (foundedUser != null) {
                     if (user.adminSender == null ){
-                        user.Authorizations = foundedUser.Authorizations; // user cannot change its own authorizations if he is its own sender
+                        user.Authorizations = foundedUser.Authorizations;                            
+                        user.isBlocked = foundedUser.isBlocked;
                     } else {
                         let foundedAdminSender = this.repository.findByField("Id", user.adminSender);
                         if (foundedAdminSender.Authorizations["readAccess"] != 2 || foundedAdminSender.Authorizations["writeAccess"] != 2 ){
                             user.Authorizations = foundedUser.Authorizations;
+                            user.isBlocked = foundedUser.isBlocked;
                         }
                         user.Avatar = foundedUser.Avatar;
                         user.adminSender = undefined;
                     }
-                    user.isBlocked = foundedUser.isBlocked;
                     user.VerifyCode = foundedUser.VerifyCode;
                     if (user.Password == '') { // password not changed
                         user.Password = foundedUser.Password;
