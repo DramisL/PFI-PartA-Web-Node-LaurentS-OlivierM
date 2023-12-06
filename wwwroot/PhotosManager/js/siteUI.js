@@ -202,10 +202,6 @@ async function renderManageUser() {
     } else {
         renderError("Service introuvable");
     }
-    $("#content").append(
-        $(`
-            
-        `))
 }
 function renderAbout() {
     let currentUser = API.retrieveLoggedUser();

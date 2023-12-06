@@ -37,7 +37,7 @@ function timeout() {
     startCountdown();
 }
 function startCountdown() {
-    if (!initialized) initTimeout();
+    if (!initialized) initTimeout(TimeOutExpireTime);
     clearTimeout(currentTimeouID);
     $(".popup").hide();
     timeLeft = maxStallingTime;
