@@ -166,8 +166,9 @@ async function renderManageUser() {
             profilToUpdate.Authorizations["writeAccess"] = 2;
             profilToUpdate.Password = "";
             profilToUpdate.adminSender = API.retrieveLoggedUser().Id
-            API.modifyUserPrivilege(profilToUpdate);
-            renderManageUser();
+            API.modifyUserPrivilege(profilToUpdate).then(() => {
+                renderManageUser();
+            });
         });
         $(".removeAdminCmd").on("click", function () {
             saveContentScrollPosition();
@@ -176,8 +177,9 @@ async function renderManageUser() {
             profilToUpdate.Authorizations["writeAccess"] = 1;
             profilToUpdate.Password = "";
             profilToUpdate.adminSender = API.retrieveLoggedUser().Id
-            API.modifyUserPrivilege(profilToUpdate);
-            renderManageUser();
+            API.modifyUserPrivilege(profilToUpdate).then(() => {
+                renderManageUser();
+            });
         });
         $(".addBlockedCmd").on("click", function () {
             saveContentScrollPosition();
@@ -185,8 +187,9 @@ async function renderManageUser() {
             profilToUpdate.isBlocked = true;
             profilToUpdate.Password = "";
             profilToUpdate.adminSender = API.retrieveLoggedUser().Id
-            API.modifyUserPrivilege(profilToUpdate);
-            renderManageUser();
+            API.modifyUserPrivilege(profilToUpdate).then(() => {
+                renderManageUser();
+            });
         });
         $(".removeBlockedCmd").on("click", function () {
             saveContentScrollPosition();
@@ -194,8 +197,9 @@ async function renderManageUser() {
             profilToUpdate.isBlocked = false;
             profilToUpdate.Password = "";
             profilToUpdate.adminSender = API.retrieveLoggedUser().Id
-            API.modifyUserPrivilege(profilToUpdate);
-            renderManageUser();
+            API.modifyUserPrivilege(profilToUpdate).then(() => {
+                renderManageUser();
+            });
         });
         $(".contactRow").on("click", function (e) { e.preventDefault(); })
 
