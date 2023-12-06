@@ -58,15 +58,15 @@ function updateDropDownMenu() {
     if (loggedUser == null) {
 
         DDMenu.append($(`
-        <span class="dropdown-item" id="loginCmd"><i class="menuIcon fa fa-sign-in mx-2"></i>Connexion</span>
+            <span class="dropdown-item" id="loginCmd"><i class="menuIcon fa fa-sign-in mx-2"></i>Connexion</span>
         `));
     } else {
         if (loggedUser.Authorizations["readAccess"] == 2 && loggedUser.Authorizations["writeAccess"] == 2) {
             DDMenu.append($(`
             <span class="dropdown-item" id="manageUserCmd">
-<i class="menuIcon fas fa-user-cog mx-2"></i>
-Gestion des usagers
-</span>
+                <i class="menuIcon fas fa-user-cog mx-2"></i>
+                Gestion des usagers
+            </span>
         `));
             DDMenu.append($(`<div class="dropdown-divider"></div>`));
         }
@@ -75,21 +75,6 @@ Gestion des usagers
         `));
     }
     DDMenu.append($(`<div class="dropdown-divider"></div>`));
-    //let selectedCategory = "";
-    //let selectClass = selectedCategory === "" ? "fa-check" : "fa-fw";
-    /*DDMenu.append($(`
-        <div class="dropdown-item menuItemLayout" id="allCatCmd">
-            <i class="menuIcon fa ${selectClass} mx-2"></i> Toutes les catégories
-        </div>
-        `));*/
-    /*categories.forEach(category => {
-        selectClass = selectedCategory === category ? "fa-check" : "fa-fw";
-        DDMenu.append($(`
-            <div class="dropdown-item menuItemLayout category" id="allCatCmd">
-                <i class="menuIcon fa ${selectClass} mx-2"></i> ${category}
-            </div>
-        `));
-    })*/
     DDMenu.append($(`
             <span class="dropdown-item" id="listPhotosMenuCmd">
                 <i class="menuIcon fa fa-image mx-2"></i>Liste des photos
@@ -104,15 +89,6 @@ Gestion des usagers
     $('#aboutCmd').on("click", function () {
         renderAbout();
     });
-    /*$('#allCatCmd').on("click", function () {
-        selectedCategory = "";
-        renderBookmarks();
-    });
-    $('.category').on("click", function () {
-        selectedCategory = $(this).text().trim();
-        renderBookmarks();
-    });*/
-
     $('#manageUserCmd').on("click", async function () {
         saveContentScrollPosition();
         renderManageUser();
@@ -143,6 +119,10 @@ Gestion des usagers
 
 }
 function renderListPhotos() {
+    let currentUser = API.retrieveLoggedUser();
+    if (currentUser != null) {
+        timeout();
+    }
     eraseContent();
     updateHeader("Liste des photos", "listPhotos");
     $("#content").append(
@@ -153,11 +133,11 @@ function renderListPhotos() {
 }
 async function renderManageUser() {
     let currentUser = API.retrieveLoggedUser();
-    if ( currentUser != null){
-        if(currentUser.Authorizations["readAccess"] != 2 || currentUser.Authorizations["writeAccess"] != 2){
+    if (currentUser != null) {
+        if (currentUser.Authorizations["readAccess"] != 2 || currentUser.Authorizations["writeAccess"] != 2) {
             renderListPhotos();
         }
-    }else{
+    } else {
         renderLogin();
     }
     eraseContent();
@@ -228,6 +208,10 @@ async function renderManageUser() {
         `))
 }
 function renderAbout() {
+    let currentUser = API.retrieveLoggedUser();
+    if (currentUser != null) {
+        timeout();
+    }
     eraseContent();
     updateHeader("À propos...", "about");
     $("#newPhotoCmd").hide();
@@ -241,7 +225,7 @@ function renderAbout() {
                     d'interface utilisateur monopage réactive.
                 </p>
                 <p>
-                    Auteur: Laurent Simard et Olvier Morin
+                    Auteur: Laurent Simard et Olivier Morin
                 </p>
                 <p>
                     Fait à partir du code de base fourni par Nicolas Chourot
@@ -258,6 +242,7 @@ function renderAbout() {
         `));
 }
 function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordError = "") {
+    noTimeout();
     eraseContent();
     updateHeader("Connexion", "connect");
     $("#newPhotoCmd").hide();
@@ -305,7 +290,7 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
                     let loggedUser = API.retrieveLoggedUser();
                     if (loggedUser.VerifyCode != "verified") {
                         renderCodeVerification(loggedUser.Id);
-                    } else{
+                    } else {
                         initTimeout(TimeOutExpireTime);
                         timeout();
                         renderListPhotos();
@@ -317,7 +302,7 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
                 case 482:
                     renderLogin("", profil.Email, "", "Mot de passe incorrect");
                     break;
-                    case 483:
+                case 483:
                     renderLogin("Votre compte a été bloqué par l'administrateur", profil.Email);
                     break;
                 default:
@@ -328,6 +313,7 @@ function renderLogin(loginMessage = "", Email = "", EmailError = "", passwordErr
     });
 }
 function renderCodeVerification() {
+    noTimeout();
     eraseContent();
     updateHeader("Vérification", "verify");
     $("#newPhotoCmd").hide();
@@ -361,6 +347,7 @@ function renderCodeVerification() {
     });
 }
 function renderCreateProfil() {
+    noTimeout();
     eraseContent(); // effacer le conteneur #content 
     updateHeader("Inscription", "createProfil"); // mettre à jour l’entête et menu
     $("#newPhotoCmd").hide(); // camoufler l’icone de commande d’ajout de photo
@@ -451,7 +438,7 @@ function renderCreateProfil() {
         let profil = getFormData($('#createProfilForm'));
         delete profil.matchedPassword;
         delete profil.matchedEmail;
-        if(!profil.Avatar) {
+        if (!profil.Avatar) {
             profil.Avatar = "no-avatar.png";
         }
         event.preventDefault();// empêcher le fureteur de soumettre une requête de soumission 
@@ -461,6 +448,8 @@ function renderCreateProfil() {
     });
 }
 function renderEditProfil() {
+    let loggedUser = API.retrieveLoggedUser();
+    noTimeout();
     eraseContent();
     updateHeader("Profil", "editProfil");
     $("#newPhotoCmd").hide();
@@ -564,9 +553,10 @@ function renderEditProfil() {
     });
 }
 async function renderDelete(user = null) {
-    if (API.retrieveLoggedUser() == null){
+    if (API.retrieveLoggedUser() == null) {
         renderLogin();
     }
+    noTimeout();
     eraseContent();
     updateHeader("Retrait de compte", "delete");
     $("#newPhotoCmd").hide();
@@ -598,7 +588,7 @@ async function renderDelete(user = null) {
             <div class="form">
             <h3>Voulez-vous vraiment effacer cet usager et toutes ces photos?</h3>
         </div>
-        <div class="UserLayout" style="text-align:center">
+        <div class="UserLayout" style="margin: auto; width: fit-content;">
             <div class="UserAvatar" style="background-image:url('${user.Avatar}')"></div>
             <div class="UserInfo">
                 <span class="UserName">${user.Name}</span>
@@ -646,13 +636,13 @@ function renderUser(contact) {
     let adminAccessToogle;
     let userBlockToogleButton;
 
-    if (contact.Authorizations["readAccess"] == 2 && contact.Authorizations["writeAccess"] == 2){
+    if (contact.Authorizations["readAccess"] == 2 && contact.Authorizations["writeAccess"] == 2) {
         adminAccessToogle = `<span class="removeAdminCmd dodgerblueCmd fas fa-user-cog" editContactId="${contact.Id}" title="Usager / promouvoir administrateur"></span>`;
     } else {
         adminAccessToogle = `<span class="addAdminCmd dodgerblueCmd fas fa-user-alt" editContactId="${contact.Id}" title="Administrateur / retirer les droits administrateur"></span>`;
     }
 
-    if (contact.isBlocked){
+    if (contact.isBlocked) {
         userBlockToogleButton = `<span class="removeBlockedCmd redCmd fa fa-ban" editContactId="${contact.Id}" title="Usager bloqué / débloquer l’accès"></span>`;
     } else {
         userBlockToogleButton = `<span class="addBlockedCmd fa-regular fa-circle greenCmd" editContactId="${contact.Id}" title="Usager non bloqué / bloquer l’accès"></span>`;
@@ -668,8 +658,8 @@ function renderUser(contact) {
                     <a href="mailto:${contact.Email}" class="UserEmail" target="_blank" >${contact.Email}</a>
                 </div>
             </div>
-            <div class="UserCommandPanel">` + adminAccessToogle + userBlockToogleButton + 
-                `<span class="deleteCmd goldenrodCmd fas fa-user-slash" deleteContactId="${contact.Id}" title="Effacer ${contact.Name}"></span>
+            <div class="UserCommandPanel">` + adminAccessToogle + userBlockToogleButton +
+        `<span class="deleteCmd goldenrodCmd fas fa-user-slash" deleteContactId="${contact.Id}" title="Effacer ${contact.Name}"></span>
             </div>
         </div>
     </div>
